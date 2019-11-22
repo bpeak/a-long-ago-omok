@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<link rel="stylesheet" href="./style.css">
+	<title>omok</title>
+	<canvas width="600px" height="600px" id="myCanvas"></canvas>
+</head>
+<body>
+	<script>
+c = document.getElementById('myCanvas')
+ctx = c.getContext('2d');
+
+var gameStart = 0;
+var gameEnd = 0;
+
+var turn = 'user'
+var winSwitch = 0;
+var winSwitch_frame = 0;
+
+var user_O_location = [];
+var com_input_location = [];
+
+var com_frame = 0;
+
+var mouseDownX = null;
+var mouseDownY = null;
+var mouseStatus = 0;
+document.addEventListener('mousedown', mouseDownHandler, false)
+com_lab_switch = 0;
+function mouseDownHandler(e){
+	if(e.which == 1){
+		mouseDownX = e.offsetX
+		mouseDownY = e.offsetY
+		gameStart = 1;
+		mouseStatus = 1;
+	}
+	if(e.which == 3){
+		comDownX = e.offsetX
+		comDownY = e.offsetY
+		com_lab_switch = 1;
+	}
+}
+
+var blackOImage = new Image();
+blackOImage.src = './img/blackO.png'
+var whiteOImage = new Image();
+whiteOImage.src = './img/whiteO.png'
+
+var pann = {};
+pann.columns = 20;
+pann.rows = pann.columns
+pann.width = 30;
+var pannImage = new Image();
+pannImage.src = './img/pann.png'
+
+var local = [];
+for(i = 0; i < pann.columns; i++){
+		local[i] = []
+	for(j = 0; j < pann.columns; j++){
+			local[i][j] = 0
+	}
+}
+
+
+var point = [];
+for(i = 0; i < pann.columns; i++){
+		point[i] = []
+	for(j = 0; j < pann.columns; j++){
+		point[i][j] = {
+			g : 0,
+			s : 0,
+			rd : 0,
+			ld : 0
+		}
+	}	
+}
+var virtual_point = []
+ for(i = 0; i < pann.columns; i++){
+	virtual_point[i] = []
+	for(j = 0; j < pann.columns; j++){
+		virtual_point[i][j] = {
+			g : 0,
+			s : 0,
+			rd : 0,
+			ld : 0
+		}
+	}
+}
+function resetPoint(){
+	point = [];
+	for(i = 0; i < pann.columns; i++){
+			point[i] = []
+		for(j = 0; j < pann.columns; j++){
+			point[i][j] = {
+				g : 0,
+				s : 0,
+				rd : 0,
+				ld : 0
+			}
+		}	
+	}
+}
+function resetVirtualPoint(){
+	virtual_point = []
+	for(i = 0; i < pann.columns; i++){
+		virtual_point[i] = []
+		for(j = 0; j < pann.columns; j++){
+			virtual_point[i][j] = {
+				g : 0,
+				s : 0,
+				rd : 0,
+				ld : 0
+			}
+		}
+	}
+}
+
+function createRandom(input){
+	return Math.floor(Math.random() * input)
+}
+//포인터 초기화 필요
+var ex;
+var expoint;
+function findInputLocation(x, y){
+	for(i = 0; i < pann.columns; i++){
+		for(j = 0; j < pann.columns; j++){
+			if(( x >= i * pann.width && x <= (i + 1) * pann.width ) && ( y >= j * pann.width && y <= (j + 1) * pann.width )){
+				return [i, j]
+			}
+		}
+	}
+}
+
+function drawPann(){
+	for(i = 0; i < pann.columns; i++){
+		for(j = 0; j < pann.columns; j++){
+			ctx.drawImage(pannImage, i * pann.width, j * pann.width, pann.width, pann.width)
+		}
+	}
+}
+
+function drawO(){
+	var whichImage;
+	for(i = 0; i < pann.columns; i++){
+		for(j = 0; j < pann.columns; j++){
+			if(local[i][j] != 0){
+				if(local[i][j] == 1){
+					whichImage = blackOImage
+				}
+				if(local[i][j] == 2){
+					whichImage = whiteOImage
+				}
+				ctx.drawImage(whichImage, i * pann.width, j * pann.width, pann.width, pann.width)
+			}
+		}
+	}
+}
+
+var a = []
+
+function getLocationPoint(locationObj, pointObj, which_O){
+	resetPoint();
+	resetVirtualPoint()
+	var max = 0;
+	for(i = 0; i < pann.columns; i++){
+		for(j = 0; j < pann.columns; j++){
+			if(locationObj[i][j] == which_O){
+				for(g = 1; g < 100; g++){
+					if((i - g) == -1){
+						break;
+					} else {
+						if(locationObj[i - g][j] == which_O){
+							pointObj[i][j].g += 1;
+						} else if(locationObj[i - g][j] == 0){
+							break;
+						} else {
+							pointObj[i][j].g -= 1;
+							break;
+						}
+					}
+				}
+				for(g = 1; g < 100; g++){
+					if((i + g) == 20){
+						break;
+					} else {
+						if(locationObj[i + g][j] == which_O){
+							pointObj[i][j].g += 1;
+						} else if(locationObj[i + g][j] == 0){
+							break;
+						} else {
+							pointObj[i][j].g -= 1;
+							break;
+						}
+					}
+				}
+				for(g = 1; g < 100; g++){
+					if((j - g) == -1){
+						break
+					} else {
+						if(locationObj[i][j - g] == which_O){
+							pointObj[i][j].s += 1;
+						} else if(locationObj[i][j - g] == 0){
+							break;
+						} else {
+							pointObj[i][j].s -= 1;
+							break;
+						}
+					}
+				}
+				for(g = 1; g < 100; g++){
+					if((j + g) == 20){
+						break;
+					} else {
+						if(locationObj[i][j + g] == which_O){
+							pointObj[i][j].s += 1;
+						} else if(locationObj[i][j + g] == 0){
+							break;
+						} else {
+							pointObj[i][j].s -= 1;
+							break;
+						}
+					}
+				}
+				for(g = 1; g < 100; g++){
+					if(Math.max.apply(null, [i + g, j + g]) == 20){
+						break;
+					} else {
+						if(locationObj[i + g][j + g] == which_O){
+							pointObj[i][j].ld += 1;
+						} else if(locationObj[i + g][j + g] == 0){
+							break;
+						} else {
+							pointObj[i][j].ld -= 1;
+							break;
+						}
+					}
+				}
+				for(g = 1; g < 100; g++){
+					if(Math.min.apply(null, [i - g, j - g]) == -1){
+						break;
+					} else {
+						if(locationObj[i - g][j - g] == which_O){
+							pointObj[i][j].ld += 1;
+						} else if(locationObj[i - g][j - g] == 0){
+							break;
+						} else {
+							pointObj[i][j].ld -= 1;
+							break;
+						}
+					}
+				}
+				for(g = 1; g < 100; g++){
+					if((i + g) == 20||(j - g) == -1){
+						break;
+					} else {
+						if(locationObj[i + g][j - g] == which_O){
+							pointObj[i][j].rd += 1;
+						} else if(locationObj[i + g][j - g] == 0){
+							break;
+						} else {
+							pointObj[i][j].rd -= 1;
+							break;
+						}
+					}
+				}
+				for(g = 1; g < 100; g++){
+					if((i - g) == -1||(j + g) == 20){
+						break;
+					} else {
+						if(locationObj[i - g][j + g] == which_O){
+							pointObj[i][j].rd += 1;
+						} else if(locationObj[i - g][j + g] == 0){
+							break;
+						} else {
+							pointObj[i][j].rd -= 1;
+							break;
+						}
+					}
+				}
+				var new_max = Math.max.apply(null, [pointObj[i][j].g, pointObj[i][j].s, pointObj[i][j].rd, pointObj[i][j].ld]);
+				if(new_max > max){
+					max = new_max
+				}
+				//console.log(i + " : " + j + " 가로pointObj : " + pointObj[i][j].g)
+				//console.log(i + " : " + j + " ldpointObj : " + pointObj[i][j].ld)
+			}
+		}
+	}
+	var final_max = max;
+	var final_max_num = 0;
+	for(i = 0; i < pann.columns; i++){
+		for(j = 0; j < pann.columns; j++){
+			for(val in pointObj[i][j]){
+				if(pointObj[i][j][val] == final_max){
+					final_max_num += 1;
+				}
+			}
+		}
+	}
+	//console.log('맥스 : ' + final_max)
+	//console.log('맥스 갯수 : ' + final_max_num)
+	return [final_max, final_max_num]
+}
+
+function comThink(){
+	
+ 	var cur_black_max = getLocationPoint(local, point, 1)
+ 	var cur_white_max = getLocationPoint(local, point, 2)
+ 	var choice_de_maxDown = []
+	var choice_de_maxLengDown = []
+	var choice_at_maxUp = []
+	var comFinalChoice = []
+ 	
+ 	//현재 돌위치 local 을 가상 location 으로 복사
+ 	virtual_location = []
+ 	for(i = 0; i < pann.columns; i++){
+		virtual_location[i] = []
+		for(j = 0; j < pann.columns; j++){
+			virtual_location[i][j] = local[i][j]
+		}
+	}
+
+
+ 	for(a = 0; a < pann.columns; a++){
+		for(b = 0; b < pann.columns; b++){
+			if(local[a][b] == 0){
+				virtual_location[a][b] = 2;
+				var virtual_black_max = getLocationPoint(virtual_location, virtual_point, 1)
+				if(cur_black_max[0] > virtual_black_max[0]){
+					console.log('현재 맥스길이는 : ' + cur_black_max[0])
+					console.log('이좌표가 맥스길이를' + virtual_black_max[0] + '로 낮춥니다 : ' + a + " , " + b)
+					choice_de_maxDown.push([a, b])
+				}
+				virtual_location[a][b] = 0;
+			}
+		}
+	}
+
+	//자기돌 point 확인하자
+	for(a = 0; a < pann.columns; a++){
+		for(b = 0; b < pann.columns; b++){
+			if(local[a][b] == 0){
+				virtual_location[a][b] = 2;
+				var virtual_white_max = getLocationPoint(virtual_location, virtual_point, 2)
+				//돌두개부터 공격하자 - > 검은돌의 최소 포인트는 1 이어야함
+				if(virtual_white_max[0] > cur_black_max[0]&& virtual_white_max[0] > cur_white_max[0]){
+					console.log('가상흰돌맥스 > 현재검돌맥스 && 가상흰돌맥스 >')
+					if(virtual_white_max[0] > 1){
+						console.log('공격포인트 2점이상 -> 공격 O')
+						console.log('그좌표는  : ' + a + ',' + b)
+						choice_at_maxUp.push([a, b])
+					} else {
+						console.log('but 공격포인트 2점미만 - > 공격x')
+					}
+				}
+				virtual_location[a][b] = 0;
+			}
+		}
+	}
+
+	//if 공격포인트가 있다
+	if(choice_at_maxUp.length != 0){
+		console.log('공격포인트 O : ' + choice_at_maxUp)
+		console.log('선택값은 : ' + choice_at_maxUp[createRandom(choice_at_maxUp.length)])
+		comFinalChoice = choice_at_maxUp[createRandom(choice_at_maxUp.length)]
+	} else {
+		if(choice_de_maxDown.length == 0){//맥스길이 낮추는 좌표가 없을시에
+			console.log('맥스길이 낮추는좌표 없음')
+			// 맥스길이낮추는좌표 x - > 맥스값 갯수 낮추는 좌표 찾아
+			for(a = 0; a < pann.columns; a++){
+				for(b = 0; b < pann.columns; b++){
+					if(local[a][b] == 0){
+						virtual_location[a][b] = 2;
+						if(cur_black_max[1] > getLocationPoint(virtual_location, virtual_point, 1)[1]){
+							console.log('이좌표가 맥스값 갯수를 낮춥니다 : ' + a + " , " + b)
+							choice_de_maxLengDown.push([a, b])
+						}
+						virtual_location[a][b] = 0;
+					}
+				}
+			}
+			console.log('맥스길이 낮추는 수가 없어서 맥스값 갯수 낮추는 좌표 말씀드립니다 ' + choice_de_maxLengDown)
+			if(choice_de_maxLengDown.length == 0){
+				//맥스길이 낮추는애도없고 값낮추는애도없다 -> 딱히 수히발곳 x
+				//그럼 흰돌길이 늘리는 코드 실행
+				//근데 이건 여기서는 무조건실행되게하고 공격할지 수비할지 비교콛 넣어서 얘가 기본적으로 선택하게 하는게 좋을듯.
+				console.log('없습니다 모르겠습니다 : ' + choice_de_maxLengDown)
+				alert("error : can't find value")
+			} else if(choice_de_maxLengDown.length == 1){
+				console.log('단 한개 있습니다 그값은 : ' + choice_de_maxLengDown)
+				comFinalChoice = choice_de_maxLengDown[0]
+			} else {
+				console.log('그중에 제가 선택한 값은 : ' + choice_de_maxLengDown[createRandom(choice_de_maxLengDown.length)])
+				comFinalChoice = choice_de_maxLengDown[createRandom(choice_de_maxLengDown.length)]
+			}
+		} else {
+			console.log('맥스길이 낮추는좌표 있음' + choice_de_maxDown)
+			if(choice_de_maxDown.length == 1){
+				console.log('단한개 있습니다 그값은 : ' + choice_de_maxDown)
+				comFinalChoice = choice_de_maxDown[0]
+			} else {
+				console.log('그중에 제가 선택한 값은 : ' + choice_de_maxDown[createRandom(choice_de_maxDown.length)])
+				comFinalChoice = choice_de_maxDown[createRandom(choice_de_maxDown.length)]
+			}
+		}
+	}
+	local[comFinalChoice[0]][comFinalChoice[1]] = 2;
+}
+
+
+function checkONum(which_O, num){
+	var breakSwitch = 0;
+	for(i = 0; i < pann.columns; i++){
+		if(breakSwitch == 1){
+			break;
+		}
+		for(j = 0; j < pann.columns; j++){
+			var O_total_garo_num = 0;
+			var O_total_sero_num = 0;
+			var O_total_rd_num = 0;
+			var O_total_ld_num = 0;
+			if(local[i][j] == which_O){
+				O_total_garo_num += 1;
+				O_total_sero_num += 1;
+				O_total_rd_num += 1;
+				O_total_ld_num += 1;
+				for(g = 1; g < pann.columns - j; g++){
+					if(local[i][j + g] == which_O){
+						O_total_sero_num += 1;
+					} else {
+						break;
+					}
+				}
+				for(g = 1; g < pann.columns - i; g++){
+					if(local[i + g][j] == which_O){
+						O_total_garo_num += 1;
+					} else {
+						break;
+					}
+				}
+				for(g = 1; g < pann.columns - Math.max.apply(null, [i, j]); g++){
+					if(local[i + g][j + g] == which_O){
+						O_total_ld_num += 1;
+					} else {
+						break;
+					}
+				}
+				for(g = 1; g < 100; g++){
+					//얘는 브레이크조건 아래에 따로 달아둠
+					if((i - g) == -1 | (j + g) == 20){
+						break;
+					} else {
+						if(local[i - g][j + g] == which_O){
+							O_total_rd_num += 1;
+						} else {
+							break;
+						}
+					}
+				}
+				if(O_total_garo_num >= num || O_total_rd_num >= num || O_total_ld_num >= num || O_total_sero_num >= num){
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+
+function main(){
+	ctx.clearRect(0, 0, c.width, c.height)
+	drawPann()
+	drawO();
+	if(com_lab_switch == 1){
+		com_O_location = findInputLocation(comDownX, comDownY)
+		local[com_O_location[0]][com_O_location[1]] = 2;
+	}
+		if(gameEnd == 0){
+			if(gameStart == 1){
+				if(turn == 'user'){
+					if(mouseStatus == 1){
+						user_O_location = findInputLocation(mouseDownX, mouseDownY);
+						if(local[user_O_location[0]][user_O_location[1]] == 0){
+							local[user_O_location[0]][user_O_location[1]] = 1
+							turn = 'com'
+							mouseStatus = 0;
+						} else {
+							turn = 'user'
+						}
+					}
+				}
+				if(turn == 'com'){
+					if(com_frame > 30){
+						comThink()
+						turn = 'user'
+						com_frame = 0
+					} else {
+						com_frame += 1;
+					}
+				}
+			}
+			if(!winSwitch){
+				if(checkONum(1, 5) == true){
+					breakSwitch = 1;
+					gameEnd = 1;
+					winSwitch = 1
+				}
+				if(checkONum(2, 5) == true){
+					breakSwitch = 1;
+					gameEnd = 1;
+					winSwitch = 2;
+				}
+			}
+		}
+	if(winSwitch != 0){
+		winSwitch_frame += 1;
+		if(winSwitch_frame > 30){
+			if(winSwitch == 1){
+				alert('검은돌 승리')
+			}
+			if (winSwitch == 2){
+				alert('흰돌 승리')
+			}
+		}
+	}
+	requestAnimationFrame(main)
+}
+
+main()
+
+//현재 필요한 업데이트 돌두개 사이에 공백잇으면 현재 3점으로 인식을 못함
+	</script>
+</body>
+</html>
